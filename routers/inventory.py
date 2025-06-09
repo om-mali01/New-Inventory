@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from utils.jwt_handler import decode_access_token
 from database import cursor, connection
 from passlib.context import CryptContext
-from schemas.stock import Update_inventory
+from schemas.stock import Update_inventory, Update_Inventory_Scan
 from typing import Annotated
 from fastapi.security import OAuth2PasswordBearer
 from utils.Barcode.barcode_generator import generate_barcodes
@@ -332,7 +332,6 @@ def update_inventory(item: Update_inventory, current_user: Annotated[str, Depend
         if user_role not in ["super_admin", "inventory_manager", "warehouse_staff"]:
             return JSONResponse(content={"detail":"don't have access"}, status_code=403)
             
-        
         check_sku_db = "SELECT sku FROM ItemDetails WHERE sku=%s"
         cursor.execute(check_sku_db, (item.sku,))
         sku_result = cursor.fetchone()
@@ -375,3 +374,39 @@ def update_inventory(item: Update_inventory, current_user: Annotated[str, Depend
         return JSONResponse(content={"details": "Stock updated"}, status_code=200)
     except:
         HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="internal server error")
+
+@router.patch("/updateInventoryScan")
+def update(item: Update_Inventory_Scan, current_user: Annotated[str, Depends(oauth2_scheme)]):
+    try:
+        payload = decode_access_token(current_user)
+        user_name = payload["sub"]
+        user_role = payload["role"]
+
+        if not user_name:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user not found")
+        if user_role not in ["super_admin", "inventory_manager", "warehouse_staff"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have access")
+        
+        check_sku = "SELECT sku FROM ItemDetails WHERE sku=%s"
+        cursor.execute(check_sku, (item.sku,))
+        sku = cursor.fetchone()[0]
+
+        if not sku:
+            return JSONResponse(content={"detail": "SKU is invalid"}, status_code=404)
+
+        get_item_id = "SELECT item_id FROM ItemDetails WHERE sku=%s"
+        cursor.execute(get_item_id, (sku,))
+        item_id = cursor.fetchone()
+
+        cursor.execute("SELECT item_price FROM ItemDetails WHERE sku=%s", (item.sku, ))
+        price = cursor.fetchone()[0]
+        stock_value = price*item.stock
+
+        update_stock = "UPDATE stock SET current_stock=%s, stock_value=%s WHERE item_id=%s"
+        cursor.execute(update_stock, (item.stock, stock_value, item_id))
+        connection.commit()
+
+        return JSONResponse(content={"detail": "Stock Updated"}, status_code=200)
+
+    except:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")

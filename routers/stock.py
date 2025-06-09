@@ -105,3 +105,4 @@ async def create_items(current_user: Annotated[str, Depends(oauth2_scheme)], ite
         return JSONResponse(content={"details": "Stock updated"}, status_code=200)
     except:
         HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="internal server error")
+

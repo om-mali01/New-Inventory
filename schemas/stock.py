@@ -5,3 +5,7 @@ class Update_inventory(BaseModel):
     stock: int | None=None
     reorder_level: int | None=None
     stock_type: str
+
+class Update_Inventory_Scan(BaseModel):
+    sku: str
+    stock: int | None=None

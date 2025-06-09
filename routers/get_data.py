@@ -116,7 +116,6 @@ def get_all_products(current_user: Annotated[str, Depends(oauth2_scheme)]):
 @router.post("/validateSKU")
 def validate_sku_and_barcode(sku: str, current_user: Annotated[str, Depends(oauth2_scheme)]):
     try:
-
         payload = decode_access_token(current_user)
 
         user_name = payload["sub"]
@@ -202,3 +201,36 @@ def get_all_products(current_user: Annotated[str, Depends(oauth2_scheme)], sku: 
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.get("/getUsersList")
+def getUsersList(current_user: Annotated[str, Depends(oauth2_scheme)]):
+    try:
+        payload = decode_access_token(current_user)
+        user_name = payload["sub"]
+        role = payload["role"]
+
+        if not user_name:
+            return JSONResponse(content={"detials": "user not found"}, status_code=404)
+        if role not in ["super_admin", "inventory_manager"]:
+            return JSONResponse(content={"detail": "Don't have access"}, status_code=403)
+        
+        get_users = "SELECT * FROM users"
+        cursor.execute(get_users)
+        data = cursor.fetchall()
+
+        all_users = []
+        
+        for row in data:
+            user = {
+                "user_id": row[0],
+                "name": row[2],
+                "number" : row[3],
+                "email": row[4],
+                "role": row[6]
+            }
+            all_users.append(user)
+
+        return all_users
+    except:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+    
