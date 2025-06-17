@@ -202,7 +202,7 @@ def get_all_products(current_user: Annotated[str, Depends(oauth2_scheme)], sku: 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-@router.get("/getUsersList")
+@router.get("/get-users-list")
 def getUsersList(current_user: Annotated[str, Depends(oauth2_scheme)]):
     try:
         payload = decode_access_token(current_user)
@@ -210,27 +210,96 @@ def getUsersList(current_user: Annotated[str, Depends(oauth2_scheme)]):
         role = payload["role"]
 
         if not user_name:
-            return JSONResponse(content={"detials": "user not found"}, status_code=404)
-        if role not in ["super_admin", "inventory_manager"]:
-            return JSONResponse(content={"detail": "Don't have access"}, status_code=403)
+            return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "User not found"})
+
+        if role not in  ["super_admin", "inventory_manager"]:
+            return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"msg": "You don't have access"})
         
-        get_users = "SELECT * FROM users"
-        cursor.execute(get_users)
+        if role == "super_admin":
+            get_user_list_admin = "SELECT * FROM users"
+            cursor.execute(get_user_list_admin)
+            data = cursor.fetchall()
+
+            result_for_admin = []
+            for row in data:
+                user = {
+                    "user_id": row[0],
+                    "name" : row[2],
+                    "user_name": row[1],
+                    "number": row[3],
+                    "email": row[4],
+                    "role": row[6]
+                }
+                result_for_admin.append(user)
+            return result_for_admin
+        
+        if role == "inventory_manager":
+            get_user_list_int_manager = "SELECT * FROM users WHERE role='warehouse_staff'"
+            cursor.execute(get_user_list_int_manager)
+            data = cursor.fetchall()
+
+            result_for_int_manager = []
+            for row in data:
+                user = {
+                    "user_id": row[0],
+                    "name" : row[2],
+                    "user_name": row[1],
+                    "phone_number": row[3],
+                    "email": row[4],
+                    "role": row[6]
+                }
+                result_for_int_manager.append(user)
+            return result_for_int_manager
+    except Exception as e:
+        return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"msg": f"Internal server error : {e}"})
+
+@router.get("/low-stocks")
+def get_low_stocks(current_user: Annotated[str, Depends(oauth2_scheme)]):
+    try:
+        payload = decode_access_token(current_user)
+        username = payload["sub"]
+        if not username:
+            return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "User not found"})
+        low_stocks_query = """select ItemDetails.item_id, ItemDetails.item_name, ItemDetails.sku, stock.current_stock, stock.reorder_level from ItemDetails
+                                INNER JOIN stock ON ItemDetails.item_id = stock.item_id
+                                where stock.current_stock <= stock.reorder_level;"""
+        cursor.execute(low_stocks_query)
         data = cursor.fetchall()
-
-        all_users = []
-        
+        result = []
         for row in data:
-            user = {
-                "user_id": row[0],
-                "name": row[2],
-                "number" : row[3],
-                "email": row[4],
-                "role": row[6]
+            inventory = {
+                "item_id": row[0],
+                "item_name": row[1],
+                "item_sku": row[2],
+                "current_stock": row[3],
+                "reorder_level": row[4]
             }
-            all_users.append(user)
+            result.append(inventory)
+        return result
+    except Exception as e:
+        return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"msg": f"Internal server error {e}"})
 
-        return all_users
-    except:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
-    
+@router.get("/getUserDetails")
+def getUsersDetails(user_name: str, current_user: Annotated[str, Depends(oauth2_scheme)]):
+    try:
+        paylaod = decode_access_token(current_user)
+        name = paylaod["sub"]
+
+        if not name:
+            return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "User not found"})
+        
+        getusersdetailquery = f"select * from users where user_name='{user_name}'"
+        cursor.execute(getusersdetailquery)
+        data = cursor.fetchone()
+
+        details = {
+            "user_id": data[0],
+            "name": data[2],
+            "user_name": data[1],
+            "phone_number": data[3],
+            "email": data[4],
+            "role": data[6]
+        }
+        return details
+    except Exception as e:
+        return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"msg": f"internal server error{e}"})

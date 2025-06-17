@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth, inventory, get_data, stock, stock_out
+from routers import auth, inventory, get_data, stock, stock_out, manage_user
 from fastapi.staticfiles import StaticFiles
 app = FastAPI()
 
@@ -19,6 +19,7 @@ app.include_router(inventory.router)
 app.include_router(get_data.router)
 app.include_router(stock.router)
 app.include_router(stock_out.router)
+app.include_router(manage_user.router)
 
 @app.get("/")
 def root():
