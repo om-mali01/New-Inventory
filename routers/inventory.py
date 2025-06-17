@@ -327,6 +327,8 @@ def update_inventory(item: Update_inventory, current_user: Annotated[str, Depend
         user_name = payload["sub"]
         user_role = payload["role"]
 
+        previous_stock = item.stock
+
         if not user_name:
             return JSONResponse(content={"detail":"user not found"}, status_code=404)
         if user_role not in ["super_admin", "inventory_manager", "warehouse_staff"]:
@@ -364,9 +366,19 @@ def update_inventory(item: Update_inventory, current_user: Annotated[str, Depend
         
         update_stock = '''UPDATE stock SET
                         current_stock = %s, stock_value=%s, reorder_level=%s
-                        WHERE item_id=%s'''
+                        WHERE item_id=%s
+                        RETURNING stock_id'''
         cursor.execute(update_stock, (item.stock, stock_value, item.reorder_level, item_id))
+        stock_id = cursor.fetchone()[0] 
         connection.commit()
+
+        if item.stock_type == "stock_in":
+            transaction_type = "IN"
+        if item.stock_type == "stock_out":
+            transaction_type = "OUT"
+
+        transaction_table = ("INSERT INTO stock_transaction (stock_id, item_id, transaction_type, quantity, remarks) VALUES (%s, %s, %s, %s, %s)")
+        cursor.execute(transaction_table, (stock_id, item_id, transaction_type, previous_stock, "None"))
 
         cursor.execute("UPDATE ItemDetails SET item_price = %s WHERE sku=%s", (stock_value, item.sku))
         connection.commit()

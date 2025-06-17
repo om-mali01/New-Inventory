@@ -74,3 +74,19 @@ delete = '''DELETE FROM roles
 #     CONSTRAINT fk_item_category FOREIGN KEY (item_category_id) REFERENCES Category (category_id) ON DELETE CASCADE,
 #     CONSTRAINT fk_item_subcategory FOREIGN KEY (item_subcategory_id) REFERENCES SubCategory (subcategory_id) ON DELETE CASCADE
 # );
+
+# ALTER TABLE stock ADD CONSTRAINT item_id_unique UNIQUE(item_id);
+
+# select ItemDetails.item_id, ItemDetails.item_name, ItemDetails.sku, stock.current_stock, stock.reorder_level from ItemDetails
+# INNER JOIN stock ON ItemDetails.item_id = stock.item_id
+# where stock.current_stock <= stock.reorder_level;
+
+# create table stock_transaction(
+# transaction_id serial primary key,
+# stock_id int REFERENCES stock(stock_id),
+# item_id int REFERENCES stock(item_id),
+# transaction_type VARCHAR(10) CHECK (transaction_type IN ('IN', 'OUT')),
+# quantity INT NOT NULL,
+# transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+# remarks TEXT
+# );

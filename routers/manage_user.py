@@ -30,3 +30,15 @@ def update_user(user: Update_user, current_user: Annotated[str, Depends(oauth2_s
         return {"msg": "User updated successfully", "status": True, "status_code":200}
     except Exception as e:
         return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"msg": f"Internal server error {e}"})
+    
+@router.delete("/delete_user")
+def delete_user(user_name: str):
+    try:
+        delete_query = f'''DELETE FROM users
+                            WHERE user_name = '{user_name}';'''
+        cursor.execute(delete_query)
+        connection.commit()
+        return {"msg": "User deleted !!"}
+        
+    except Exception as e:
+        return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{e}")

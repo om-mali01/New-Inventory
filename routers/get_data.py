@@ -303,3 +303,28 @@ def getUsersDetails(user_name: str, current_user: Annotated[str, Depends(oauth2_
         return details
     except Exception as e:
         return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"msg": f"internal server error{e}"})
+    
+@router.get("/get-transaction")
+def get_transaction(item_id: int, current_user: Annotated[str, Depends(oauth2_scheme)]):
+    try:
+        payload = decode_access_token(current_user)
+        username = payload["sub"]
+        if not username:
+            return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "User not found"})
+        
+        cursor.execute(f"SELECT * FROM stock_transaction WHERE item_id = {item_id}")
+        data = cursor.fetchall()
+        result = []
+
+        for row in data:
+            record = {
+                "transaction_id": row[0],
+                "transaction_type": row[3],
+                "quantity": row[4],
+                "transaction_date": row[5],
+                "remark": row[6]
+            }
+            result.append(record)
+        return result
+    except Exception as e:
+        return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"msg": f"internal server error {e}"})
