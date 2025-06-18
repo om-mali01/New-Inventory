@@ -314,17 +314,17 @@ def get_transaction(sku: str, current_user: Annotated[str, Depends(oauth2_scheme
             return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "User not found"})
         
         
-        cursor.execute(f"SELECT * FROM stock_transaction WHERE sku='{sku}'")
+        cursor.execute(f"SELECT * FROM stock_transactions WHERE sku='{sku}'")
         data = cursor.fetchall()
         result = []
 
         for row in data:
             record = {
                 "transaction_id": row[0],
-                "transaction_type": row[3],
-                "quantity": row[4],
-                "transaction_date": row[5],
-                "remark": row[6]
+                "transaction_type": row[4],
+                "quantity": row[5],
+                "transaction_date": row[6],
+                "remark": row[7]
             }
             result.append(record)
         return result

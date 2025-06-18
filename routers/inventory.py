@@ -377,7 +377,7 @@ def update_inventory(item: Update_inventory, current_user: Annotated[str, Depend
         if item.stock_type == "stock_out":
             transaction_type = "OUT"
 
-        transaction_table = ("INSERT INTO stock_transaction (stock_id, item_id, transaction_type, quantity, remarks, sku) VALUES (%s, %s, %s, %s, %s, %s)")
+        transaction_table = ("INSERT INTO stock_transactions (stock_id, item_id, transaction_type, quantity, remarks, sku) VALUES (%s, %s, %s, %s, %s, %s)")
         cursor.execute(transaction_table, (stock_id, item_id, transaction_type, previous_stock, "None", item.sku))
 
         cursor.execute("UPDATE ItemDetails SET item_price = %s WHERE sku=%s", (stock_value, item.sku))
@@ -436,10 +436,10 @@ def update(item: Update_Inventory_Scan, current_user: Annotated[str, Depends(oau
         stock_id = cursor.fetchone()[0]
         # return stock_id
 
-        transaction_table = ("INSERT INTO stock_transaction (stock_id, item_id, transaction_type, quantity, remarks, sku) VALUES (%s, %s, %s, %s, %s, %s)")
+        transaction_table = ("INSERT INTO stock_transactions (stock_id, item_id, transaction_type, quantity, remarks, sku) VALUES (%s, %s, %s, %s, %s, %s)")
         cursor.execute(transaction_table, (stock_id, item_id, transaction_type, stock, "None", item.sku))
         connection.commit()
-        
+
         return JSONResponse(content={"detail": "Stock Updated"}, status_code=200)
 
     except Exception as e:
