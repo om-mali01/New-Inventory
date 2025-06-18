@@ -377,8 +377,8 @@ def update_inventory(item: Update_inventory, current_user: Annotated[str, Depend
         if item.stock_type == "stock_out":
             transaction_type = "OUT"
 
-        transaction_table = ("INSERT INTO stock_transaction (stock_id, item_id, transaction_type, quantity, remarks) VALUES (%s, %s, %s, %s, %s)")
-        cursor.execute(transaction_table, (stock_id, item_id, transaction_type, previous_stock, "None"))
+        transaction_table = ("INSERT INTO stock_transaction (stock_id, item_id, transaction_type, quantity, remarks, sku) VALUES (%s, %s, %s, %s, %s, %s)")
+        cursor.execute(transaction_table, (stock_id, item_id, transaction_type, previous_stock, "None", item.sku))
 
         cursor.execute("UPDATE ItemDetails SET item_price = %s WHERE sku=%s", (stock_value, item.sku))
         connection.commit()
@@ -402,23 +402,45 @@ def update(item: Update_Inventory_Scan, current_user: Annotated[str, Depends(oau
         check_sku = "SELECT sku FROM ItemDetails WHERE sku=%s"
         cursor.execute(check_sku, (item.sku,))
         sku = cursor.fetchone()[0]
+        # return sku
 
         if not sku:
             return JSONResponse(content={"detail": "SKU is invalid"}, status_code=404)
 
         get_item_id = "SELECT item_id FROM ItemDetails WHERE sku=%s"
         cursor.execute(get_item_id, (sku,))
-        item_id = cursor.fetchone()
+        item_id = cursor.fetchone()[0]
 
         cursor.execute("SELECT item_price FROM ItemDetails WHERE sku=%s", (item.sku, ))
         price = cursor.fetchone()[0]
         stock_value = price*item.stock
 
-        update_stock = "UPDATE stock SET current_stock=%s, stock_value=%s WHERE item_id=%s"
-        cursor.execute(update_stock, (item.stock, stock_value, item_id))
-        connection.commit()
+        cursor.execute("SELECT current_stock From stock WHERE item_id=%s", (item_id,))
+        old_stock = cursor.fetchone()[0]
 
+        stock = 0
+        if item.stock > old_stock:
+            transaction_type = "IN"
+            stock = item.stock - old_stock
+        elif item.stock < old_stock:
+            transaction_type = "OUT"
+            stock = old_stock - item.stock
+
+        update_stock = """
+            UPDATE stock 
+            SET current_stock = %s, stock_value = %s 
+            WHERE item_id = %s 
+            RETURNING stock_id;
+        """
+        cursor.execute(update_stock, (item.stock, stock_value, item_id))
+        stock_id = cursor.fetchone()[0]
+        # return stock_id
+
+        transaction_table = ("INSERT INTO stock_transaction (stock_id, item_id, transaction_type, quantity, remarks, sku) VALUES (%s, %s, %s, %s, %s, %s)")
+        cursor.execute(transaction_table, (stock_id, item_id, transaction_type, stock, "None", item.sku))
+        connection.commit()
+        
         return JSONResponse(content={"detail": "Stock Updated"}, status_code=200)
 
-    except:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal Server Error: {e}")

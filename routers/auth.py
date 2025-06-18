@@ -47,19 +47,22 @@ def verifying_otp():
 
 @router.post("/register")
 def register_user(user: RegistrationUser):
-    query = f"SELECT user_name FROM users WHERE user_name = '{user.user_name}'"
-    cursor.execute(query)
-    # return cursor.fetchone()
-    
-    if cursor.fetchone():
-        raise HTTPException(status_code=400, detail="User already exists")
-    
-    hashed_password = pwd_context.hash(user.password)
-    query = f"""INSERT INTO users (user_name, name, mobile_number, email, password, role)
-                VALUES ('{user.user_name}', '{user.name}', '{user.mobile_no}', '{user.email}', '{hashed_password}', '{user.role}')"""
-    cursor.execute(query)
-    connection.commit()
-    return JSONResponse(content={"msg": "User Created"}, status_code=201)
+    try:
+        query = f"SELECT user_name FROM users WHERE user_name = '{user.user_name}'"
+        cursor.execute(query)
+        # return cursor.fetchone()
+        
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail="User already exists")
+        
+        hashed_password = pwd_context.hash(user.password)
+        query = f"""INSERT INTO users (user_name, name, mobile_number, email, password, role)
+                    VALUES ('{user.user_name}', '{user.name}', '{user.mobile_no}', '{user.email}', '{hashed_password}', '{user.role}')"""
+        cursor.execute(query)
+        connection.commit()
+        return JSONResponse(content={"msg": "User Created"}, status_code=201)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"msg": f"internal server error {e}"})
 
 @router.post("/login", response_model=Token)
 def login_user(user: LoginUser):

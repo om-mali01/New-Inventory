@@ -32,13 +32,20 @@ def update_user(user: Update_user, current_user: Annotated[str, Depends(oauth2_s
         return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"msg": f"Internal server error {e}"})
     
 @router.delete("/delete_user")
-def delete_user(user_name: str):
+def delete_user(delete_username: str, current_user: Annotated[str, Depends(oauth2_scheme)]):
     try:
-        delete_query = f'''DELETE FROM users
-                            WHERE user_name = '{user_name}';'''
-        cursor.execute(delete_query)
+        payload = decode_access_token(current_user)
+        user_name = payload["sub"]
+        role = payload["role"]
+        if not user_name:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "User not found"})
+        if role not in ["super_admin"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"msg": "You don't have access"})
+    
+        cursor.execute("DELETE FROM users WHERE user_name = %s", (delete_username,))
         connection.commit()
+
         return {"msg": "User deleted !!"}
         
     except Exception as e:
-        return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{e}")
