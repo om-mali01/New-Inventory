@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import jwt
-from config import SECRET_KEY, ALGORITHM
+from config import SECRET_KEY, ALGORITHM, REFRESH_SECRET_KEY
 
 def create_access_token(data: dict):
     to_encode = data.copy()
@@ -13,3 +13,16 @@ def decode_access_token(token: str):
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise Exception("Token expired")
+
+def create_refresh_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(days=7)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
+
+def decode_refresh_token(refresh_token: str):
+    try:
+        return jwt.decode(refresh_token, REFRESH_SECRET_KEY, algorithms=[ALGORITHM])
+    except:
+        raise Exception("Refresh token expired")
+    

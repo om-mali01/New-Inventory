@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends, status
-from utils.jwt_handler import create_access_token, decode_access_token
+from utils.jwt_handler import create_access_token, decode_access_token, decode_refresh_token, create_refresh_token
 from database import cursor, connection
 from passlib.context import CryptContext
 from schemas.auth import RegistrationUser, LoginUser, Token
 from typing import Annotated, Literal
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 router = APIRouter(tags=["auth"])
 
@@ -14,36 +15,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # below line will check if client sends the Token or not, it will not verify token is correct or wrong
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-@router.post("/registring")
-def register_user():
-    return {
-        "status":True,
-        "message":"hello",
-        "data":{
-            "token":"",
-        }
-    }
-
-@router.post("/verifying-otp")
-def verifying_otp():
-    return {
-        "status":True,
-        "message":"hello",
-        "data":{
-            "user_name":""
-        }
-    }
-
-@router.post("/logining")
-def verifying_otp():
-    return {
-        "status":True,
-        "message":"hello",
-        "data":{
-            "token":""
-        }
-    }
 
 @router.post("/register")
 def register_user(user: RegistrationUser):
@@ -82,7 +53,8 @@ def login_user(user: LoginUser):
             role = cursor.fetchone()[0]
             
             access_token = create_access_token(data={"sub": user.user_name, "role":role})
-            return {"access_token": access_token, "msg": "Login successful", "token_type": "bearer", "role":role}
+            refresh_token = create_refresh_token(data={"sub": user.user_name, "role":role})
+            return {"access_token": access_token, "refresh_token":refresh_token, "msg": "Login successful", "token_type": "bearer", "role":role}
         
         cursor.execute(f"SELECT user_name FROM super_admin WHERE user_name = '{user.user_name}'")
         get_user = cursor.fetchone()
@@ -98,8 +70,11 @@ def login_user(user: LoginUser):
             cursor.execute(getrole)
             role = cursor.fetchone()[0]
             
-            access_token = create_access_token(data={"sub": user.user_name, "role": role})
-            return {"access_token": access_token, "msg": "Login successful", "token_type": "bearer", "role":role}
+            access_token = create_access_token(data={"sub": user.user_name, "role":role})
+            refresh_token = create_refresh_token(data={"sub": user.user_name, "role":role})
+            # print("--------")
+            # print(refresh_token)
+            return {"access_token": access_token, "refresh_token":refresh_token, "msg": "Login successful", "token_type": "bearer", "role":role}
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     except Exception as e:
@@ -124,3 +99,21 @@ def get_roles(current_user: Annotated[str, Depends(oauth2_scheme)]):
         return result
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalid")
+
+class Refresh_token_data(BaseModel):
+    refresh_token: str
+
+@router.get("/getRefreshToken")
+def get_refresh_token(data: Refresh_token_data):
+    try:
+        payload = decode_refresh_token(data)
+        username = payload["sub"]
+        role = payload["role"]
+        if not username:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "Invalid refresh token"})
+        
+        new_access_token = create_access_token({"sub": username, "role":role})
+        return {"access_token": new_access_token, "msg": "New access token returned", "token_type": "bearer", "role":role}
+        
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"msg": f"Internal server error {e}"})

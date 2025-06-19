@@ -6,7 +6,7 @@ from passlib.context import CryptContext
 from typing import Annotated
 from fastapi.security import OAuth2PasswordBearer
 import os
-
+import jwt
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -17,9 +17,13 @@ router = APIRouter(tags=["get_data"])
 @router.get("/getSubCategories")
 def get_categories(id:int, current_user: Annotated[str, Depends(oauth2_scheme)]):
     try:
-        payload = decode_access_token(current_user)
-        if not payload:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="token invalid")
+        try:
+            payload = decode_access_token(current_user)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token has expired")
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
+ 
         user_name = payload["sub"]
         user_role = payload["role"]
         if not user_name:
@@ -44,9 +48,12 @@ def get_categories(id:int, current_user: Annotated[str, Depends(oauth2_scheme)])
 @router.get("/getCategories")
 def get_categories(current_user: Annotated[str, Depends(oauth2_scheme)]):
     try:
-        payload = decode_access_token(current_user)
-        if not payload:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or authentication failed")
+        try:
+            payload = decode_access_token(current_user)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token has expired")
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
         
         user_name = payload["sub"]
         user_role = payload["role"]
@@ -77,8 +84,13 @@ def get_categories(current_user: Annotated[str, Depends(oauth2_scheme)]):
 @router.get("/getAllProducts")
 def get_all_products(current_user: Annotated[str, Depends(oauth2_scheme)]):
     try:
-        payload = decode_access_token(current_user)
-        # print(payload)
+        try:
+            payload = decode_access_token(current_user)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token has expired")
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
+ 
         user_name = payload["sub"]
         user_role = payload["role"]
         if not user_name:
@@ -116,7 +128,13 @@ def get_all_products(current_user: Annotated[str, Depends(oauth2_scheme)]):
 @router.post("/validateSKU")
 def validate_sku_and_barcode(sku: str, current_user: Annotated[str, Depends(oauth2_scheme)]):
     try:
-        payload = decode_access_token(current_user)
+        try:
+            payload = decode_access_token(current_user)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token has expired")
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
+ 
 
         user_name = payload["sub"]
         role = payload["role"]
@@ -139,7 +157,13 @@ def validate_sku_and_barcode(sku: str, current_user: Annotated[str, Depends(oaut
 @router.get("/productDetails")
 def get_all_products(current_user: Annotated[str, Depends(oauth2_scheme)], sku: str | None=None, barcode_num: str| None=None):
     try:
-        payload = decode_access_token(current_user)
+        try:
+            payload = decode_access_token(current_user)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token has expired")
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
+ 
         # print(payload)
         user_name = payload["sub"]
         user_role = payload["role"]
@@ -205,7 +229,13 @@ def get_all_products(current_user: Annotated[str, Depends(oauth2_scheme)], sku: 
 @router.get("/get-users-list")
 def getUsersList(current_user: Annotated[str, Depends(oauth2_scheme)]):
     try:
-        payload = decode_access_token(current_user)
+        try:
+            payload = decode_access_token(current_user)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token has expired")
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
+ 
         user_name = payload["sub"]
         role = payload["role"]
 
@@ -256,7 +286,13 @@ def getUsersList(current_user: Annotated[str, Depends(oauth2_scheme)]):
 @router.get("/low-stocks")
 def get_low_stocks(current_user: Annotated[str, Depends(oauth2_scheme)]):
     try:
-        payload = decode_access_token(current_user)
+        try:
+            payload = decode_access_token(current_user)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token has expired")
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
+ 
         username = payload["sub"]
         if not username:
             return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "User not found"})
@@ -282,8 +318,14 @@ def get_low_stocks(current_user: Annotated[str, Depends(oauth2_scheme)]):
 @router.get("/getUserDetails")
 def getUsersDetails(user_name: str, current_user: Annotated[str, Depends(oauth2_scheme)]):
     try:
-        paylaod = decode_access_token(current_user)
-        name = paylaod["sub"]
+        try:
+            payload = decode_access_token(current_user)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token has expired")
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
+ 
+        name = payload["sub"]
 
         if not name:
             return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"msg": "User not found"})
@@ -307,7 +349,13 @@ def getUsersDetails(user_name: str, current_user: Annotated[str, Depends(oauth2_
 @router.get("/get-transaction")
 def get_transaction(sku: str, current_user: Annotated[str, Depends(oauth2_scheme)]):
     try:
-        payload = decode_access_token(current_user)
+        try:
+            payload = decode_access_token(current_user)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token has expired")
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid access token")
+ 
         username = payload["sub"]
         role = payload["role"]
         if not username:
