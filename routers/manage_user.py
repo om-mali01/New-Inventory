@@ -23,9 +23,9 @@ def update_user(user: Update_user, current_user: Annotated[str, Depends(oauth2_s
             return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"msg": "You don't have access"})
 
         update_query = """UPDATE users SET
-                        name = %s, user_name=%s, mobile_number=%s, email=%s, role=%s 
-                        WHERE id=%s"""
-        cursor.execute(update_query, (user.name, user.user_name, user.phone_number, user.email, user.role, user.user_id))
+                        name = %s, mobile_number=%s, email=%s, role=%s 
+                        WHERE user_name=%s"""
+        cursor.execute(update_query, (user.name, user.phone_number, user.email, user.role, user.user_name))
         connection.commit()
         return {"msg": "User updated successfully", "status": True, "status_code":200}
     except Exception as e:

@@ -103,7 +103,7 @@ def get_roles(current_user: Annotated[str, Depends(oauth2_scheme)]):
 class Refresh_token_data(BaseModel):
     refresh_token: str
 
-@router.get("/getRefreshToken")
+@router.post("/getRefreshToken")
 def get_refresh_token(data: Refresh_token_data):
     try:
         payload = decode_refresh_token(data)
